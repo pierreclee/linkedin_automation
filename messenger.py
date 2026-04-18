@@ -34,6 +34,11 @@ def accept_pending_connections(page: Page, max_count: int) -> list[str]:
                 profile_url = profile_link.get_attribute("href").split("?")[0]
 
             accept_btn.click()
+            # Attendre que le bouton disparaisse (carte acceptée retirée du DOM)
+            try:
+                accept_btn.wait_for("detached", timeout=5000)
+            except Exception:
+                pass
             time.sleep(random.uniform(3, 8))
 
             if profile_url:
@@ -93,14 +98,36 @@ def send_mp(page: Page, profile_url: str, message: str) -> None:
 
 def reply_to_comment(page: Page, comment_url: str, message: str) -> None:
     """Répond à un commentaire LinkedIn spécifique."""
+    from urllib.parse import urlparse, parse_qs, unquote
+
     page.goto(comment_url, wait_until="domcontentloaded", timeout=30000)
     time.sleep(random.uniform(2, 4))
 
-    # Trouver le bouton "Répondre" du commentaire ciblé
-    reply_btn = page.query_selector(
-        "button.comments-comment-item__reply-action-button, "
-        "button[aria-label*='Répondre' i]"
-    )
+    # Extraire l'identifiant de commentaire depuis l'URL pour cibler le bon article
+    parsed = urlparse(comment_url)
+    qs = parse_qs(parsed.query)
+    comment_urn = unquote(qs.get("commentUrn", [""])[0])
+
+    # Chercher l'article correspondant au commentaire ciblé
+    reply_btn = None
+    if comment_urn:
+        # Chercher l'article dont le data-id ou l'attribut contient l'URN
+        articles = page.query_selector_all("article.comments-comment-item")
+        for article in articles:
+            if comment_urn in (article.get_attribute("data-id") or ""):
+                reply_btn = article.query_selector(
+                    "button.comments-comment-item__reply-action-button, "
+                    "button[aria-label*='Répondre' i]"
+                )
+                break
+
+    # Fallback : premier bouton Répondre visible (fonctionne si un seul commentaire)
+    if not reply_btn:
+        reply_btn = page.query_selector(
+            "button.comments-comment-item__reply-action-button, "
+            "button[aria-label*='Répondre' i]"
+        )
+
     if not reply_btn:
         raise ValueError(f"Bouton Répondre non trouvé pour {comment_url}")
     reply_btn.click()
