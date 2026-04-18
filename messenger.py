@@ -1,5 +1,6 @@
 import time
 import random
+from urllib.parse import urlparse, parse_qs, unquote
 from playwright.sync_api import Page
 
 
@@ -98,8 +99,6 @@ def send_mp(page: Page, profile_url: str, message: str) -> None:
 
 def reply_to_comment(page: Page, comment_url: str, message: str) -> None:
     """Répond à un commentaire LinkedIn spécifique."""
-    from urllib.parse import urlparse, parse_qs, unquote
-
     page.goto(comment_url, wait_until="domcontentloaded", timeout=30000)
     time.sleep(random.uniform(2, 4))
 
