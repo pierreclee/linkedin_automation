@@ -192,7 +192,7 @@ def cmd_add_post(url: str, msg_mp: str, msg_comment_reply: str):
 def cmd_remove_post(url: str):
     db.init_db(DB_PATH)
     db.remove_post(url, DB_PATH)
-    text = f"Post supprimé : {url}"
+    text = f"Post supprimé (et engagements associés) : {url}"
     print(text)
     return text
 
