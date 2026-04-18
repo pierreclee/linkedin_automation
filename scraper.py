@@ -183,12 +183,18 @@ def scrape_comments(page: Page, post_url: str) -> list[dict]:
                     comment_url = href if href.startswith("http") else f"https://www.linkedin.com{href}"
 
             is_connected = _get_connection_status(item)
+            text_el = item.query_selector(
+                ".comments-comment-item__main-content, "
+                ".comments-comment-item__inline-show-more-text"
+            )
+            comment_text = text_el.inner_text().strip() if text_el else ""
             results.append({
                 "profile_url": profile_url,
                 "first_name": first_name,
                 "comment_url": comment_url,
                 "comment_at": comment_at.isoformat(),
                 "is_connected": is_connected,
+                "comment_text": comment_text,
             })
 
     except Exception as e:
@@ -279,6 +285,7 @@ def scrape_post_engagements(page: Page, post_url: str, db_path: str) -> None:
             commented=1,
             comment_url=c["comment_url"],
             comment_at=c["comment_at"],
+            comment_text=c["comment_text"],
             is_connected=1 if c["is_connected"] else 0,
             db_path=db_path,
         )
