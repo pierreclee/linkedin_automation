@@ -76,42 +76,44 @@ def test_upsert_engagement_update_adds_comment(tmp_db):
     assert row[1] == 1  # commented added
 
 def test_get_pending_engagements_priority_order(tmp_db):
-    db.add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply", tmp_db)
+    db.add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply", tmp_db, keyword="test")
     old_comment = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
 
-    # Priority 2: liked + commented + connected, no repost
     db.upsert_engagement("https://linkedin.com/in/bob", "https://linkedin.com/post/1",
                          first_name="Bob", liked=1, commented=1, reposted=0, is_connected=1,
-                         comment_url="url1", comment_at=old_comment, db_path=tmp_db)
-    # Priority 1: liked + commented + reposted + connected
+                         comment_url="url1", comment_at=old_comment,
+                         comment_text="test super", db_path=tmp_db)
     db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
                          first_name="Alice", liked=1, commented=1, reposted=1, is_connected=1,
-                         comment_url="url2", comment_at=old_comment, db_path=tmp_db)
-    # Priority 3: liked + commented + not connected
+                         comment_url="url2", comment_at=old_comment,
+                         comment_text="test génial", db_path=tmp_db)
     db.upsert_engagement("https://linkedin.com/in/charlie", "https://linkedin.com/post/1",
                          first_name="Charlie", liked=1, commented=1, reposted=0, is_connected=0,
-                         comment_url="url3", comment_at=old_comment, db_path=tmp_db)
+                         comment_url="url3", comment_at=old_comment,
+                         comment_text="test intéressant", db_path=tmp_db)
 
     pending = db.get_pending_engagements(tmp_db)
     assert len(pending) == 3
-    assert pending[0]["profile_url"] == "https://linkedin.com/in/alice"  # priority 1
-    assert pending[1]["profile_url"] == "https://linkedin.com/in/bob"    # priority 2
-    assert pending[2]["profile_url"] == "https://linkedin.com/in/charlie" # priority 3
+    assert pending[0]["profile_url"] == "https://linkedin.com/in/alice"
+    assert pending[1]["profile_url"] == "https://linkedin.com/in/bob"
+    assert pending[2]["profile_url"] == "https://linkedin.com/in/charlie"
 
 def test_get_pending_excludes_recent_comments(tmp_db):
-    db.add_post("https://linkedin.com/post/1", "msg", "reply", tmp_db)
+    db.add_post("https://linkedin.com/post/1", "msg", "reply", tmp_db, keyword="test")
     recent = (datetime.utcnow() - timedelta(minutes=2)).isoformat()
     db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
                          first_name="Alice", liked=1, commented=1, is_connected=1,
-                         comment_url="url", comment_at=recent, db_path=tmp_db)
+                         comment_url="url", comment_at=recent,
+                         comment_text="test", db_path=tmp_db)
     assert len(db.get_pending_engagements(tmp_db)) == 0
 
 def test_get_pending_excludes_action_taken(tmp_db):
-    db.add_post("https://linkedin.com/post/1", "msg", "reply", tmp_db)
+    db.add_post("https://linkedin.com/post/1", "msg", "reply", tmp_db, keyword="test")
     old = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
     db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
                          first_name="Alice", liked=1, commented=1, is_connected=1,
-                         comment_url="url", comment_at=old, db_path=tmp_db)
+                         comment_url="url", comment_at=old,
+                         comment_text="test", db_path=tmp_db)
     db.mark_action_taken("https://linkedin.com/in/alice", "https://linkedin.com/post/1", "mp_sent", tmp_db)
     assert len(db.get_pending_engagements(tmp_db)) == 0
 
@@ -131,3 +133,56 @@ def test_start_and_finish_run(tmp_db):
     assert last["mp_sent"] == 5
     assert last["comment_replies_sent"] == 3
     assert last["max_connections_this_run"] == 25
+
+def test_init_db_adds_keyword_column(tmp_db):
+    conn = sqlite3.connect(tmp_db)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(posts)").fetchall()}
+    conn.close()
+    assert "keyword" in cols
+
+def test_init_db_adds_comment_text_column(tmp_db):
+    conn = sqlite3.connect(tmp_db)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(engagements)").fetchall()}
+    conn.close()
+    assert "comment_text" in cols
+
+def test_add_post_stores_keyword(tmp_db):
+    db.add_post("https://linkedin.com/post/1", "msg", "reply", tmp_db, keyword="bonjour")
+    posts = db.list_posts(tmp_db)
+    assert posts[0]["keyword"] == "bonjour"
+
+def test_get_pending_requires_keyword_and_match(tmp_db):
+    db.add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply", tmp_db, keyword="bonjour")
+    old = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
+    db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
+                         first_name="Alice", liked=1, commented=1, is_connected=1,
+                         comment_text="Bonjour, super post!", comment_at=old,
+                         comment_url="url1", db_path=tmp_db)
+    assert len(db.get_pending_engagements(tmp_db)) == 1
+
+def test_get_pending_filters_non_matching_comment(tmp_db):
+    db.add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply", tmp_db, keyword="bonjour")
+    old = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
+    db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
+                         first_name="Alice", liked=1, commented=1, is_connected=1,
+                         comment_text="Super intéressant!", comment_at=old,
+                         comment_url="url1", db_path=tmp_db)
+    assert len(db.get_pending_engagements(tmp_db)) == 0
+
+def test_get_pending_no_keyword_means_no_results(tmp_db):
+    db.add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply", tmp_db)
+    old = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
+    db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
+                         first_name="Alice", liked=1, commented=1, is_connected=1,
+                         comment_text="Bonjour!", comment_at=old,
+                         comment_url="url1", db_path=tmp_db)
+    assert len(db.get_pending_engagements(tmp_db)) == 0
+
+def test_get_pending_keyword_case_insensitive(tmp_db):
+    db.add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply", tmp_db, keyword="BONJOUR")
+    old = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
+    db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
+                         first_name="Alice", liked=1, commented=1, is_connected=1,
+                         comment_text="bonjour, super post!", comment_at=old,
+                         comment_url="url1", db_path=tmp_db)
+    assert len(db.get_pending_engagements(tmp_db)) == 1

@@ -66,6 +66,14 @@ def init_db(db_path=DB_PATH):
             );
             INSERT OR IGNORE INTO config (key, value) VALUES ('enabled', '1');
         """)
+        for stmt in [
+            "ALTER TABLE posts ADD COLUMN keyword TEXT",
+            "ALTER TABLE engagements ADD COLUMN comment_text TEXT",
+        ]:
+            try:
+                conn.execute(stmt)
+            except Exception:
+                pass  # colonne déjà présente
 
 
 def get_config(key, db_path=DB_PATH):
@@ -79,11 +87,11 @@ def set_config(key, value, db_path=DB_PATH):
         conn.execute("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", (key, value))
 
 
-def add_post(url, msg_mp, msg_comment_reply, db_path=DB_PATH):
+def add_post(url, msg_mp, msg_comment_reply, db_path=DB_PATH, keyword=None):
     with _conn(db_path) as conn:
         conn.execute(
-            "INSERT OR IGNORE INTO posts (url, added_at, msg_mp, msg_comment_reply) VALUES (?, ?, ?, ?)",
-            (url, datetime.utcnow().isoformat(), msg_mp, msg_comment_reply),
+            "INSERT OR IGNORE INTO posts (url, added_at, msg_mp, msg_comment_reply, keyword) VALUES (?, ?, ?, ?, ?)",
+            (url, datetime.utcnow().isoformat(), msg_mp, msg_comment_reply, keyword),
         )
 
 
@@ -103,17 +111,18 @@ def get_active_posts(db_path=DB_PATH):
         return conn.execute("SELECT * FROM posts WHERE active = 1").fetchall()
 
 
-def update_post_templates(url, msg_mp, msg_comment_reply, db_path=DB_PATH):
+def update_post_templates(url, msg_mp, msg_comment_reply, db_path=DB_PATH, keyword=None):
     with _conn(db_path) as conn:
         conn.execute(
-            "UPDATE posts SET msg_mp = ?, msg_comment_reply = ? WHERE url = ?",
-            (msg_mp, msg_comment_reply, url),
+            "UPDATE posts SET msg_mp = ?, msg_comment_reply = ?, keyword = ? WHERE url = ?",
+            (msg_mp, msg_comment_reply, keyword, url),
         )
 
 
 def upsert_engagement(profile_url, post_url, first_name=None, liked=None,
                       commented=None, comment_url=None, comment_at=None,
-                      reposted=None, is_connected=None, db_path=DB_PATH):
+                      reposted=None, is_connected=None, comment_text=None,
+                      db_path=DB_PATH):
     now = datetime.utcnow().isoformat()
     with _conn(db_path) as conn:
         existing = conn.execute(
@@ -123,13 +132,14 @@ def upsert_engagement(profile_url, post_url, first_name=None, liked=None,
 
         if existing:
             updates = {"last_scraped_at": now}
-            if first_name is not None:   updates["first_name"]   = first_name
-            if liked is not None:        updates["liked"]        = liked
-            if commented is not None:    updates["commented"]    = commented
-            if comment_url is not None:  updates["comment_url"]  = comment_url
-            if comment_at is not None:   updates["comment_at"]   = comment_at
-            if reposted is not None:     updates["reposted"]     = reposted
-            if is_connected is not None: updates["is_connected"] = is_connected
+            if first_name is not None:    updates["first_name"]    = first_name
+            if liked is not None:         updates["liked"]         = liked
+            if commented is not None:     updates["commented"]     = commented
+            if comment_url is not None:   updates["comment_url"]   = comment_url
+            if comment_at is not None:    updates["comment_at"]    = comment_at
+            if reposted is not None:      updates["reposted"]      = reposted
+            if is_connected is not None:  updates["is_connected"]  = is_connected
+            if comment_text is not None:  updates["comment_text"]  = comment_text
             set_clause = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
                 f"UPDATE engagements SET {set_clause} WHERE profile_url = ? AND post_url = ?",
@@ -139,11 +149,12 @@ def upsert_engagement(profile_url, post_url, first_name=None, liked=None,
             conn.execute(
                 """INSERT INTO engagements
                    (profile_url, post_url, first_name, liked, commented,
-                    comment_url, comment_at, reposted, is_connected, last_scraped_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    comment_url, comment_at, reposted, is_connected, comment_text,
+                    last_scraped_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (profile_url, post_url, first_name,
                  liked or 0, commented or 0, comment_url, comment_at,
-                 reposted or 0, is_connected or 0, now),
+                 reposted or 0, is_connected or 0, comment_text, now),
             )
 
 
@@ -172,6 +183,9 @@ def get_pending_engagements(db_path=DB_PATH):
               AND e.commented = 1
               AND e.comment_at IS NOT NULL
               AND datetime(e.comment_at) <= datetime('now', '-5 minutes')
+              AND p.keyword IS NOT NULL
+              AND e.comment_text IS NOT NULL
+              AND LOWER(e.comment_text) LIKE '%' || LOWER(p.keyword) || '%'
             ORDER BY priority ASC
         """).fetchall()
 
