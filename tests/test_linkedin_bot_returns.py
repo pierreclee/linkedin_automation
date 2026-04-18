@@ -39,7 +39,7 @@ def test_cmd_list_posts_with_post_returns_string(tmp_db):
     assert "linkedin.com/post/1" in result
 
 def test_cmd_add_post_returns_string(tmp_db):
-    result = linkedin_bot.cmd_add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply")
+    result = linkedin_bot.cmd_add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply", "bonjour")
     assert isinstance(result, str)
     assert "ajouté" in result
 

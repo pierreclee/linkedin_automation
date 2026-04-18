@@ -181,9 +181,9 @@ def cmd_run():
         print(report)
 
 
-def cmd_add_post(url: str, msg_mp: str, msg_comment_reply: str):
+def cmd_add_post(url: str, msg_mp: str, msg_comment_reply: str, keyword: str):
     db.init_db(DB_PATH)
-    db.add_post(url, msg_mp, msg_comment_reply, DB_PATH)
+    db.add_post(url, msg_mp, msg_comment_reply, DB_PATH, keyword=keyword)
     text = f"Post ajouté : {url}"
     print(text)
     return text
@@ -263,6 +263,7 @@ def main():
     parser.add_argument("--add-post", metavar="URL", help="Ajouter un post à scanner")
     parser.add_argument("--msg-mp", metavar="MSG", help="Template MP (avec --add-post)")
     parser.add_argument("--msg-reply", metavar="MSG", help="Template réponse commentaire (avec --add-post)")
+    parser.add_argument("--keyword", metavar="KW", help="Mot-clé déclencheur (avec --add-post ou --setmsg)")
     parser.add_argument("--setmsg", metavar="URL", help="Modifier les templates d'un post existant")
     parser.add_argument("--remove-post", metavar="URL", help="Supprimer un post")
     parser.add_argument("--list-posts", action="store_true", help="Lister les posts trackés")
@@ -279,11 +280,13 @@ def main():
     elif args.add_post:
         msg_mp = args.msg_mp or input("Message MP (liked+commented+connecté) : ")
         msg_reply = args.msg_reply or input("Réponse commentaire (non connecté) : ")
-        cmd_add_post(args.add_post, msg_mp, msg_reply)
+        keyword = args.keyword or input("Mot-clé déclencheur : ")
+        cmd_add_post(args.add_post, msg_mp, msg_reply, keyword)
     elif args.setmsg:
         msg_mp = args.msg_mp or input("Nouveau message MP : ")
         msg_reply = args.msg_reply or input("Nouvelle réponse commentaire : ")
-        db.update_post_templates(args.setmsg, msg_mp, msg_reply, DB_PATH)
+        keyword = args.keyword or input("Nouveau mot-clé déclencheur : ")
+        db.update_post_templates(args.setmsg, msg_mp, msg_reply, DB_PATH, keyword=keyword)
         print(f"Templates mis à jour pour : {args.setmsg}")
     elif args.remove_post:
         cmd_remove_post(args.remove_post)
