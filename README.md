@@ -22,6 +22,10 @@ Tourne sur Raspberry Pi 4 (Linux headless). Contrôlé via Telegram (OpenClaw).
 git clone <repo-url>
 cd bot-linkedin-automation
 
+# Créer et activer l'environnement virtuel (obligatoire sur Raspberry Pi OS)
+python3 -m venv venv
+source venv/bin/activate
+
 # Installer les dépendances
 pip install -r requirements.txt
 
@@ -74,30 +78,65 @@ La session dure en général 30 à 90 jours. Quand tu reçois l'alerte Telegram 
 crontab -e
 ```
 
-Ajouter (exemple : toutes les 4 heures) :
-```
-0 */4 * * * cd /home/pi/bot-linkedin-automation && python3 linkedin_bot.py --run >> logs/cron.log 2>&1
+Créer le dossier de logs d'abord :
+```bash
+mkdir -p /home/pi/linkedin_automation/logs
 ```
 
-Créer le dossier de logs :
-```bash
-mkdir -p /home/pi/bot-linkedin-automation/logs
+Ajouter (exemple : toutes les 4 heures) — utilise le Python du venv, pas `python3` système :
+```
+0 */4 * * * cd /home/pi/linkedin_automation && /home/pi/linkedin_automation/venv/bin/python linkedin_bot.py --run >> logs/cron.log 2>&1
 ```
 
 ---
 
-## Utilisation via Telegram (OpenClaw)
+## Utilisation via Telegram
+
+Une fois le listener démarré (voir section Déploiement du listener), contrôle le bot directement depuis Telegram :
 
 | Commande | Action |
 |----------|--------|
 | `/linkedin help` | Afficher toutes les commandes |
-| `/linkedin add <url>` | Ajouter un post à scanner (flow interactif pour les templates) |
+| `/linkedin add <url>` | Ajouter un post (flow interactif : le bot te demande les templates) |
 | `/linkedin list` | Lister les posts trackés |
 | `/linkedin remove <url>` | Supprimer un post et ses données |
 | `/linkedin setmsg <url>` | Modifier les templates d'un post existant |
 | `/linkedin on` / `/linkedin off` | Activer / désactiver le bot |
-| `/linkedin status` | État, statistiques du dernier run |
-| `/linkedin run` | Forcer un run immédiat |
+| `/linkedin status` | État et stats du dernier run |
+| `/linkedin run` | Forcer un run immédiat (asynchrone — rapport envoyé à la fin) |
+
+---
+
+## Utilisation via SSH (alternative)
+
+Si le listener n'est pas actif, contrôle via SSH :
+
+```bash
+ssh pi@<ip-du-pi>
+cd ~/linkedin_automation
+source venv/bin/activate
+python linkedin_bot.py --status
+python linkedin_bot.py --add-post <url>
+```
+
+---
+
+## Déploiement du listener (service systemd)
+
+Sur le Pi, après avoir cloné le repo et installé les dépendances :
+
+```bash
+sudo cp linkedin-listener.service /etc/systemd/system/
+sudo systemctl enable linkedin-listener
+sudo systemctl start linkedin-listener
+sudo systemctl status linkedin-listener   # vérifier que ça tourne
+```
+
+Le service redémarre automatiquement en cas de crash et au reboot du Pi. Pour voir les logs :
+
+```bash
+journalctl -u linkedin-listener -f
+```
 
 ---
 
