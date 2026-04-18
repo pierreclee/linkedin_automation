@@ -12,10 +12,8 @@ Usage:
     python linkedin_bot.py --status                               # Afficher l'état
 """
 import argparse
-import json
 import os
 import random
-import sys
 import time
 
 from dotenv import load_dotenv
@@ -71,6 +69,7 @@ def cmd_run():
     comment_replies_sent = 0
     errors = []
 
+    # Flag pour supprimer le rapport Telegram si une alerte session-expirée a déjà été envoyée
     session_expired = False
     try:
         with sync_playwright() as p:
