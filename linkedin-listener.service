@@ -1,0 +1,13 @@
+[Unit]
+Description=LinkedIn Bot Telegram Listener
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/linkedin_automation
+ExecStart=/home/pi/linkedin_automation/venv/bin/python telegram_listener.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
