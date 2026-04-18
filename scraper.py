@@ -2,13 +2,13 @@ import time
 import random
 import re
 from datetime import datetime, timedelta
-from playwright.sync_api import sync_playwright, Page
+from playwright.sync_api import Page
 
 
 def _parse_relative_time(time_str: str) -> datetime:
     """Convertit '5m', '2h', '3d' en datetime absolue."""
     now = datetime.now()
-    m = re.match(r"(\d+)\s*([mhdjMa])", time_str.strip().lower())
+    m = re.match(r"(\d+)\s*([mhdjsa])", time_str.strip().lower())
     if not m:
         return now
     value, unit = int(m.group(1)), m.group(2)
@@ -18,7 +18,7 @@ def _parse_relative_time(time_str: str) -> datetime:
         return now - timedelta(hours=value)
     if unit in ("d", "j"):
         return now - timedelta(days=value)
-    # semaine, mois, an → considéré très vieux
+    # semaine (s), an (a) → considéré très vieux
     return now - timedelta(days=365)
 
 
