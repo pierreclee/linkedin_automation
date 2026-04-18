@@ -184,40 +184,53 @@ def cmd_run():
 def cmd_add_post(url: str, msg_mp: str, msg_comment_reply: str):
     db.init_db(DB_PATH)
     db.add_post(url, msg_mp, msg_comment_reply, DB_PATH)
-    print(f"Post ajouté : {url}")
+    text = f"Post ajouté : {url}"
+    print(text)
+    return text
 
 
 def cmd_remove_post(url: str):
     db.init_db(DB_PATH)
     db.remove_post(url, DB_PATH)
-    print(f"Post supprimé (et engagements associés) : {url}")
+    text = f"Post supprimé : {url}"
+    print(text)
+    return text
 
 
 def cmd_list_posts():
     db.init_db(DB_PATH)
     posts = db.list_posts(DB_PATH)
     if not posts:
-        print("Aucun post enregistré.")
-        return
+        text = "Aucun post enregistré."
+        print(text)
+        return text
+    lines = []
     for p in posts:
         status = "✓ actif" if p["active"] else "✗ inactif"
-        print(f"[{status}] {p['url']}")
+        lines.append(f"[{status}] {p['url']}")
         msg_mp = p['msg_mp'] or ''
         msg_reply = p['msg_comment_reply'] or ''
-        print(f"  msg_mp          : {msg_mp[:60]}{'...' if len(msg_mp) > 60 else ''}")
-        print(f"  msg_comment_reply: {msg_reply[:60]}{'...' if len(msg_reply) > 60 else ''}")
+        lines.append(f"  msg_mp          : {msg_mp[:60]}{'...' if len(msg_mp) > 60 else ''}")
+        lines.append(f"  msg_comment_reply: {msg_reply[:60]}{'...' if len(msg_reply) > 60 else ''}")
+    text = "\n".join(lines)
+    print(text)
+    return text
 
 
 def cmd_enable():
     db.init_db(DB_PATH)
     db.set_config("enabled", "1", DB_PATH)
-    print("Bot activé.")
+    text = "Bot activé."
+    print(text)
+    return text
 
 
 def cmd_disable():
     db.init_db(DB_PATH)
     db.set_config("enabled", "0", DB_PATH)
-    print("Bot désactivé.")
+    text = "Bot désactivé."
+    print(text)
+    return text
 
 
 def cmd_status():
@@ -225,15 +238,22 @@ def cmd_status():
     enabled = db.get_config("enabled", DB_PATH)
     posts = db.get_active_posts(DB_PATH)
     last = db.get_last_run(DB_PATH)
-    print(f"État      : {'✓ activé' if enabled == '1' else '✗ désactivé'}")
-    print(f"Posts actifs : {len(posts)}")
+    lines = [
+        f"État      : {'✓ activé' if enabled == '1' else '✗ désactivé'}",
+        f"Posts actifs : {len(posts)}",
+    ]
     if last:
-        print(f"Dernier run : {last['started_at']}")
-        print(f"  connexions={last['connections_accepted']} mp={last['mp_sent']} replies={last['comment_replies_sent']}")
+        lines.append(f"Dernier run : {last['started_at']}")
+        lines.append(
+            f"  connexions={last['connections_accepted']} mp={last['mp_sent']} replies={last['comment_replies_sent']}"
+        )
         if last["errors"]:
-            print(f"  erreurs : {last['errors']}")
+            lines.append(f"  erreurs : {last['errors']}")
     else:
-        print("Aucun run enregistré.")
+        lines.append("Aucun run enregistré.")
+    text = "\n".join(lines)
+    print(text)
+    return text
 
 
 def main():
