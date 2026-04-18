@@ -74,7 +74,8 @@ def handle_message(text: str, pending_state: dict) -> tuple:
 
         if step == "add_keyword":
             result = cmd_add_post(
-                pending_state["url"], pending_state["msg_mp"], pending_state["msg_reply"], text
+                pending_state["url"], pending_state["msg_mp"], pending_state["msg_reply"],
+                text.strip() or None
             )
             return result, {}
 
@@ -93,7 +94,7 @@ def handle_message(text: str, pending_state: dict) -> tuple:
         if step == "setmsg_keyword":
             db.update_post_templates(
                 pending_state["url"], pending_state["msg_mp"], pending_state["msg_reply"],
-                DB_PATH, keyword=text
+                DB_PATH, keyword=text.strip() or None
             )
             return "✅ Templates mis à jour.", {}
 

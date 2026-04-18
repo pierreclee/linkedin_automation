@@ -280,12 +280,12 @@ def main():
     elif args.add_post:
         msg_mp = args.msg_mp or input("Message MP (liked+commented+connecté) : ")
         msg_reply = args.msg_reply or input("Réponse commentaire (non connecté) : ")
-        keyword = args.keyword or input("Mot-clé déclencheur : ")
+        keyword = (args.keyword or input("Mot-clé déclencheur : ")).strip() or None
         cmd_add_post(args.add_post, msg_mp, msg_reply, keyword)
     elif args.setmsg:
         msg_mp = args.msg_mp or input("Nouveau message MP : ")
         msg_reply = args.msg_reply or input("Nouvelle réponse commentaire : ")
-        keyword = args.keyword or input("Nouveau mot-clé déclencheur : ")
+        keyword = (args.keyword or input("Nouveau mot-clé déclencheur : ")).strip() or None
         db.update_post_templates(args.setmsg, msg_mp, msg_reply, DB_PATH, keyword=keyword)
         print(f"Templates mis à jour pour : {args.setmsg}")
     elif args.remove_post:
