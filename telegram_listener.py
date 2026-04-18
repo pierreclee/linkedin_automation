@@ -157,9 +157,14 @@ def main():
             if not text:
                 continue
 
-            response, pending_state = handle_message(text, pending_state)
-            if response:
-                tg.send_message(response)
+            try:
+                response, pending_state = handle_message(text, pending_state)
+                if response:
+                    tg.send_message(response)
+            except Exception as exc:
+                print(f"[listener] Erreur traitement message : {exc}")
+                pending_state = {}
+                tg.send_message(f"⚠️ Erreur interne : {exc}")
 
 
 if __name__ == "__main__":
