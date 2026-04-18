@@ -67,7 +67,15 @@ def handle_message(text: str, pending_state: dict) -> tuple:
             return "Réponse en commentaire (pour les non connectés) ?", pending_state
 
         if step == "add_msg_reply":
-            result = cmd_add_post(pending_state["url"], pending_state["msg_mp"], text)
+            pending_state = dict(pending_state)
+            pending_state["msg_reply"] = text
+            pending_state["step"] = "add_keyword"
+            return "Mot-clé déclencheur (insensible à la casse) ?", pending_state
+
+        if step == "add_keyword":
+            result = cmd_add_post(
+                pending_state["url"], pending_state["msg_mp"], pending_state["msg_reply"], text
+            )
             return result, {}
 
         if step == "setmsg_msg_mp":
@@ -77,7 +85,16 @@ def handle_message(text: str, pending_state: dict) -> tuple:
             return "Nouvelle réponse en commentaire ?", pending_state
 
         if step == "setmsg_msg_reply":
-            db.update_post_templates(pending_state["url"], pending_state["msg_mp"], text, DB_PATH)
+            pending_state = dict(pending_state)
+            pending_state["msg_reply"] = text
+            pending_state["step"] = "setmsg_keyword"
+            return "Nouveau mot-clé déclencheur ?", pending_state
+
+        if step == "setmsg_keyword":
+            db.update_post_templates(
+                pending_state["url"], pending_state["msg_mp"], pending_state["msg_reply"],
+                DB_PATH, keyword=text
+            )
             return "✅ Templates mis à jour.", {}
 
     # Ignorer les messages qui ne sont pas des commandes /linkedin

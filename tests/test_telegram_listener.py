@@ -90,21 +90,16 @@ def test_add_flow_step2():
     assert new_state["msg_mp"] == "Salut {first_name}!"
     assert "commentaire" in response.lower()
 
-def test_add_flow_step3_saves_post():
+def test_add_flow_step3_asks_for_keyword():
     state = {
         "step": "add_msg_reply",
         "url": "https://linkedin.com/post/1",
         "msg_mp": "Salut {first_name}!",
     }
-    with patch("telegram_listener.cmd_add_post", return_value="Post ajouté : https://linkedin.com/post/1") as mock:
-        response, new_state = tl.handle_message("Connecte-toi!", state)
-        mock.assert_called_once_with(
-            "https://linkedin.com/post/1",
-            "Salut {first_name}!",
-            "Connecte-toi!",
-        )
-        assert new_state == {}
-        assert "ajouté" in response.lower()
+    response, new_state = tl.handle_message("Connecte-toi!", state)
+    assert new_state["step"] == "add_keyword"
+    assert new_state["msg_reply"] == "Connecte-toi!"
+    assert "mot" in response.lower() or "clé" in response.lower() or "keyword" in response.lower()
 
 
 # --- Tests du flow conversationnel /linkedin setmsg ---
@@ -120,16 +115,49 @@ def test_setmsg_flow_step2():
     assert new_state["step"] == "setmsg_msg_reply"
     assert new_state["msg_mp"] == "Nouveau MP"
 
-def test_setmsg_flow_step3_updates_templates():
+def test_setmsg_flow_step3_asks_for_keyword():
     state = {
         "step": "setmsg_msg_reply",
         "url": "https://linkedin.com/post/1",
         "msg_mp": "Nouveau MP",
     }
+    response, new_state = tl.handle_message("Nouvelle reply", state)
+    assert new_state["step"] == "setmsg_keyword"
+    assert new_state["msg_reply"] == "Nouvelle reply"
+    assert "mot" in response.lower() or "clé" in response.lower() or "keyword" in response.lower()
+
+
+def test_add_flow_step4_saves_post():
+    state = {
+        "step": "add_keyword",
+        "url": "https://linkedin.com/post/1",
+        "msg_mp": "Salut {first_name}!",
+        "msg_reply": "Connecte-toi!",
+    }
+    with patch("telegram_listener.cmd_add_post", return_value="Post ajouté : https://linkedin.com/post/1") as mock:
+        response, new_state = tl.handle_message("bonjour", state)
+        mock.assert_called_once_with(
+            "https://linkedin.com/post/1",
+            "Salut {first_name}!",
+            "Connecte-toi!",
+            "bonjour",
+        )
+        assert new_state == {}
+        assert "ajouté" in response.lower()
+
+
+def test_setmsg_flow_step4_updates_templates():
+    state = {
+        "step": "setmsg_keyword",
+        "url": "https://linkedin.com/post/1",
+        "msg_mp": "Nouveau MP",
+        "msg_reply": "Nouvelle reply",
+    }
     with patch("telegram_listener.db") as mock_db:
-        response, new_state = tl.handle_message("Nouvelle reply", state)
+        response, new_state = tl.handle_message("bonjour", state)
         mock_db.update_post_templates.assert_called_once_with(
-            "https://linkedin.com/post/1", "Nouveau MP", "Nouvelle reply", tl.DB_PATH
+            "https://linkedin.com/post/1", "Nouveau MP", "Nouvelle reply", tl.DB_PATH,
+            keyword="bonjour"
         )
         assert new_state == {}
         assert "mis à jour" in response.lower()
