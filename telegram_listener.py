@@ -28,10 +28,10 @@ load_dotenv()
 
 HELP_TEXT = """Commandes disponibles :
 /linkedin help — Afficher cette aide
-/linkedin add <url> — Ajouter un post à scanner
+/linkedin add &lt;url&gt; — Ajouter un post à scanner
 /linkedin list — Lister les posts trackés
-/linkedin remove <url> — Supprimer un post et ses données
-/linkedin setmsg <url> — Modifier les templates d'un post
+/linkedin remove &lt;url&gt; — Supprimer un post et ses données
+/linkedin setmsg &lt;url&gt; — Modifier les templates d'un post
 /linkedin on — Activer le bot
 /linkedin off — Désactiver le bot
 /linkedin status — État et stats du dernier run
