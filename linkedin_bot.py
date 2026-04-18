@@ -202,8 +202,10 @@ def cmd_list_posts():
     for p in posts:
         status = "✓ actif" if p["active"] else "✗ inactif"
         print(f"[{status}] {p['url']}")
-        print(f"  msg_mp          : {(p['msg_mp'] or '')[:60]}...")
-        print(f"  msg_comment_reply: {(p['msg_comment_reply'] or '')[:60]}...")
+        msg_mp = p['msg_mp'] or ''
+        msg_reply = p['msg_comment_reply'] or ''
+        print(f"  msg_mp          : {msg_mp[:60]}{'...' if len(msg_mp) > 60 else ''}")
+        print(f"  msg_comment_reply: {msg_reply[:60]}{'...' if len(msg_reply) > 60 else ''}")
 
 
 def cmd_enable():
@@ -235,8 +237,6 @@ def cmd_status():
 
 
 def main():
-    db.init_db(DB_PATH)
-
     parser = argparse.ArgumentParser(description="LinkedIn Bot Automation")
     parser.add_argument("--login", action="store_true", help="Login manuel (Windows uniquement)")
     parser.add_argument("--run", action="store_true", help="Lancer le run complet")
