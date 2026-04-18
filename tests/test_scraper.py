@@ -16,16 +16,16 @@ from scraper import _parse_relative_time
     ("1a", timedelta(days=365)),   # années → very old
 ])
 def test_parse_relative_time(time_str, expected_delta):
-    before = datetime.now()
+    before = datetime.utcnow()
     result = _parse_relative_time(time_str)
-    after = datetime.now()
+    after = datetime.utcnow()
     expected = before - expected_delta
     # Allow 2s of clock drift
     assert abs((result - expected).total_seconds()) < 2
 
 
 def test_parse_relative_time_unknown_returns_now():
-    before = datetime.now()
+    before = datetime.utcnow()
     result = _parse_relative_time("xyz")
-    after = datetime.now()
+    after = datetime.utcnow()
     assert before <= result <= after

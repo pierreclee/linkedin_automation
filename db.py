@@ -83,7 +83,7 @@ def add_post(url, msg_mp, msg_comment_reply, db_path=DB_PATH):
     with _conn(db_path) as conn:
         conn.execute(
             "INSERT OR IGNORE INTO posts (url, added_at, msg_mp, msg_comment_reply) VALUES (?, ?, ?, ?)",
-            (url, datetime.now().isoformat(), msg_mp, msg_comment_reply),
+            (url, datetime.utcnow().isoformat(), msg_mp, msg_comment_reply),
         )
 
 
@@ -114,7 +114,7 @@ def update_post_templates(url, msg_mp, msg_comment_reply, db_path=DB_PATH):
 def upsert_engagement(profile_url, post_url, first_name=None, liked=None,
                       commented=None, comment_url=None, comment_at=None,
                       reposted=None, is_connected=None, db_path=DB_PATH):
-    now = datetime.now().isoformat()
+    now = datetime.utcnow().isoformat()
     with _conn(db_path) as conn:
         existing = conn.execute(
             "SELECT id FROM engagements WHERE profile_url = ? AND post_url = ?",
@@ -171,7 +171,7 @@ def get_pending_engagements(db_path=DB_PATH):
               AND e.liked = 1
               AND e.commented = 1
               AND e.comment_at IS NOT NULL
-              AND datetime(e.comment_at) <= datetime('now', 'localtime', '-5 minutes')
+              AND datetime(e.comment_at) <= datetime('now', '-5 minutes')
             ORDER BY priority ASC
         """).fetchall()
 
@@ -180,7 +180,7 @@ def mark_action_taken(profile_url, post_url, action, db_path=DB_PATH):
     with _conn(db_path) as conn:
         conn.execute(
             "UPDATE engagements SET action_taken=?, action_taken_at=? WHERE profile_url=? AND post_url=?",
-            (action, datetime.now().isoformat(), profile_url, post_url),
+            (action, datetime.utcnow().isoformat(), profile_url, post_url),
         )
 
 
@@ -188,7 +188,7 @@ def add_accepted_connection(profile_url, db_path=DB_PATH):
     with _conn(db_path) as conn:
         conn.execute(
             "INSERT OR IGNORE INTO accepted_connections (profile_url, accepted_at) VALUES (?, ?)",
-            (profile_url, datetime.now().isoformat()),
+            (profile_url, datetime.utcnow().isoformat()),
         )
 
 
@@ -196,7 +196,7 @@ def start_run(max_connections, max_messages, db_path=DB_PATH):
     with _conn(db_path) as conn:
         cursor = conn.execute(
             "INSERT INTO runs (started_at, max_connections_this_run, max_messages_this_run) VALUES (?, ?, ?)",
-            (datetime.now().isoformat(), max_connections, max_messages),
+            (datetime.utcnow().isoformat(), max_connections, max_messages),
         )
         return cursor.lastrowid
 
@@ -207,7 +207,7 @@ def finish_run(run_id, connections_accepted, mp_sent, comment_replies_sent,
         conn.execute(
             """UPDATE runs SET finished_at=?, connections_accepted=?, mp_sent=?,
                comment_replies_sent=?, errors=? WHERE id=?""",
-            (datetime.now().isoformat(), connections_accepted, mp_sent,
+            (datetime.utcnow().isoformat(), connections_accepted, mp_sent,
              comment_replies_sent, errors, run_id),
         )
 

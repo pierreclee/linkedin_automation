@@ -6,8 +6,8 @@ from playwright.sync_api import Page
 
 
 def _parse_relative_time(time_str: str) -> datetime:
-    """Convertit '5m', '2h', '3d' en datetime absolue."""
-    now = datetime.now()
+    """Convertit '5m', '2h', '3d' en datetime absolue (UTC)."""
+    now = datetime.utcnow()
     m = re.match(r"(\d+)\s*([mhdjsa])", time_str.strip().lower())
     if not m:
         return now
@@ -170,7 +170,7 @@ def scrape_comments(page: Page, post_url: str) -> list[dict]:
                 "a.comments-comment-item__timestamp, "
                 "span.comments-comment-item__timestamp"
             )
-            comment_at = datetime.now()
+            comment_at = datetime.utcnow()
             comment_url = post_url
             if time_el:
                 time_text = time_el.get_attribute("datetime") or time_el.inner_text()

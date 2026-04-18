@@ -41,7 +41,7 @@ def test_remove_post_deletes_engagements(tmp_db):
     db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
                          first_name="Alice", liked=1, commented=1,
                          comment_url="https://linkedin.com/post/1?commentId=1",
-                         comment_at=(datetime.now() - timedelta(minutes=10)).isoformat(),
+                         comment_at=(datetime.utcnow() - timedelta(minutes=10)).isoformat(),
                          is_connected=1, db_path=tmp_db)
     db.remove_post("https://linkedin.com/post/1", tmp_db)
     assert len(db.list_posts(tmp_db)) == 0
@@ -67,7 +67,7 @@ def test_upsert_engagement_update_adds_comment(tmp_db):
     db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
                          commented=1,
                          comment_url="https://linkedin.com/post/1?commentId=1",
-                         comment_at=(datetime.now() - timedelta(minutes=10)).isoformat(),
+                         comment_at=(datetime.utcnow() - timedelta(minutes=10)).isoformat(),
                          db_path=tmp_db)
     conn = sqlite3.connect(tmp_db)
     row = conn.execute("SELECT liked, commented FROM engagements WHERE profile_url = 'https://linkedin.com/in/alice'").fetchone()
@@ -77,7 +77,7 @@ def test_upsert_engagement_update_adds_comment(tmp_db):
 
 def test_get_pending_engagements_priority_order(tmp_db):
     db.add_post("https://linkedin.com/post/1", "msg_mp", "msg_reply", tmp_db)
-    old_comment = (datetime.now() - timedelta(minutes=10)).isoformat()
+    old_comment = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
 
     # Priority 2: liked + commented + connected, no repost
     db.upsert_engagement("https://linkedin.com/in/bob", "https://linkedin.com/post/1",
@@ -100,7 +100,7 @@ def test_get_pending_engagements_priority_order(tmp_db):
 
 def test_get_pending_excludes_recent_comments(tmp_db):
     db.add_post("https://linkedin.com/post/1", "msg", "reply", tmp_db)
-    recent = (datetime.now() - timedelta(minutes=2)).isoformat()
+    recent = (datetime.utcnow() - timedelta(minutes=2)).isoformat()
     db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
                          first_name="Alice", liked=1, commented=1, is_connected=1,
                          comment_url="url", comment_at=recent, db_path=tmp_db)
@@ -108,7 +108,7 @@ def test_get_pending_excludes_recent_comments(tmp_db):
 
 def test_get_pending_excludes_action_taken(tmp_db):
     db.add_post("https://linkedin.com/post/1", "msg", "reply", tmp_db)
-    old = (datetime.now() - timedelta(minutes=10)).isoformat()
+    old = (datetime.utcnow() - timedelta(minutes=10)).isoformat()
     db.upsert_engagement("https://linkedin.com/in/alice", "https://linkedin.com/post/1",
                          first_name="Alice", liked=1, commented=1, is_connected=1,
                          comment_url="url", comment_at=old, db_path=tmp_db)
