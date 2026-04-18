@@ -72,7 +72,7 @@ def init_db(db_path=DB_PATH):
         ]:
             try:
                 conn.execute(stmt)
-            except Exception:
+            except sqlite3.OperationalError:
                 pass  # colonne déjà présente
 
 
@@ -113,10 +113,16 @@ def get_active_posts(db_path=DB_PATH):
 
 def update_post_templates(url, msg_mp, msg_comment_reply, db_path=DB_PATH, keyword=None):
     with _conn(db_path) as conn:
-        conn.execute(
-            "UPDATE posts SET msg_mp = ?, msg_comment_reply = ?, keyword = ? WHERE url = ?",
-            (msg_mp, msg_comment_reply, keyword, url),
-        )
+        if keyword is not None:
+            conn.execute(
+                "UPDATE posts SET msg_mp = ?, msg_comment_reply = ?, keyword = ? WHERE url = ?",
+                (msg_mp, msg_comment_reply, keyword, url),
+            )
+        else:
+            conn.execute(
+                "UPDATE posts SET msg_mp = ?, msg_comment_reply = ? WHERE url = ?",
+                (msg_mp, msg_comment_reply, url),
+            )
 
 
 def upsert_engagement(profile_url, post_url, first_name=None, liked=None,
