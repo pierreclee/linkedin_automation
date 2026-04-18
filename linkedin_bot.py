@@ -71,6 +71,7 @@ def cmd_run():
     comment_replies_sent = 0
     errors = []
 
+    session_expired = False
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -83,7 +84,8 @@ def cmd_run():
                     "Lance <code>python linkedin_bot.py --login</code> sur Windows "
                     "puis retransfère <code>session/state.json</code> sur le Pi."
                 )
-                db.finish_run(run_id, 0, 0, 0, "Session expirée", DB_PATH)
+                errors.append("Session expirée")
+                session_expired = True
                 return
 
             # 1. Accepter les connexions
@@ -175,5 +177,6 @@ def cmd_run():
             report += f"⚠️ {len(errors)} erreur(s) : {'; '.join(errors[:3])}"
         else:
             report += "✓ Aucune erreur"
-        tg.send_message(report)
+        if not session_expired:
+            tg.send_message(report)
         print(report)
