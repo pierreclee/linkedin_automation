@@ -179,3 +179,105 @@ def cmd_run():
         if not session_expired:
             tg.send_message(report)
         print(report)
+
+
+def cmd_add_post(url: str, msg_mp: str, msg_comment_reply: str):
+    db.init_db(DB_PATH)
+    db.add_post(url, msg_mp, msg_comment_reply, DB_PATH)
+    print(f"Post ajouté : {url}")
+
+
+def cmd_remove_post(url: str):
+    db.init_db(DB_PATH)
+    db.remove_post(url, DB_PATH)
+    print(f"Post supprimé (et engagements associés) : {url}")
+
+
+def cmd_list_posts():
+    db.init_db(DB_PATH)
+    posts = db.list_posts(DB_PATH)
+    if not posts:
+        print("Aucun post enregistré.")
+        return
+    for p in posts:
+        status = "✓ actif" if p["active"] else "✗ inactif"
+        print(f"[{status}] {p['url']}")
+        print(f"  msg_mp          : {(p['msg_mp'] or '')[:60]}...")
+        print(f"  msg_comment_reply: {(p['msg_comment_reply'] or '')[:60]}...")
+
+
+def cmd_enable():
+    db.init_db(DB_PATH)
+    db.set_config("enabled", "1", DB_PATH)
+    print("Bot activé.")
+
+
+def cmd_disable():
+    db.init_db(DB_PATH)
+    db.set_config("enabled", "0", DB_PATH)
+    print("Bot désactivé.")
+
+
+def cmd_status():
+    db.init_db(DB_PATH)
+    enabled = db.get_config("enabled", DB_PATH)
+    posts = db.get_active_posts(DB_PATH)
+    last = db.get_last_run(DB_PATH)
+    print(f"État      : {'✓ activé' if enabled == '1' else '✗ désactivé'}")
+    print(f"Posts actifs : {len(posts)}")
+    if last:
+        print(f"Dernier run : {last['started_at']}")
+        print(f"  connexions={last['connections_accepted']} mp={last['mp_sent']} replies={last['comment_replies_sent']}")
+        if last["errors"]:
+            print(f"  erreurs : {last['errors']}")
+    else:
+        print("Aucun run enregistré.")
+
+
+def main():
+    db.init_db(DB_PATH)
+
+    parser = argparse.ArgumentParser(description="LinkedIn Bot Automation")
+    parser.add_argument("--login", action="store_true", help="Login manuel (Windows uniquement)")
+    parser.add_argument("--run", action="store_true", help="Lancer le run complet")
+    parser.add_argument("--add-post", metavar="URL", help="Ajouter un post à scanner")
+    parser.add_argument("--msg-mp", metavar="MSG", help="Template MP (avec --add-post)")
+    parser.add_argument("--msg-reply", metavar="MSG", help="Template réponse commentaire (avec --add-post)")
+    parser.add_argument("--setmsg", metavar="URL", help="Modifier les templates d'un post existant")
+    parser.add_argument("--remove-post", metavar="URL", help="Supprimer un post")
+    parser.add_argument("--list-posts", action="store_true", help="Lister les posts trackés")
+    parser.add_argument("--enable", action="store_true", help="Activer le bot")
+    parser.add_argument("--disable", action="store_true", help="Désactiver le bot")
+    parser.add_argument("--status", action="store_true", help="Afficher l'état du bot")
+
+    args = parser.parse_args()
+
+    if args.login:
+        cmd_login()
+    elif args.run:
+        cmd_run()
+    elif args.add_post:
+        msg_mp = args.msg_mp or input("Message MP (liked+commented+connecté) : ")
+        msg_reply = args.msg_reply or input("Réponse commentaire (non connecté) : ")
+        cmd_add_post(args.add_post, msg_mp, msg_reply)
+    elif args.setmsg:
+        msg_mp = args.msg_mp or input("Nouveau message MP : ")
+        msg_reply = args.msg_reply or input("Nouvelle réponse commentaire : ")
+        db.update_post_templates(args.setmsg, msg_mp, msg_reply, DB_PATH)
+        print(f"Templates mis à jour pour : {args.setmsg}")
+    elif args.remove_post:
+        cmd_remove_post(args.remove_post)
+    elif args.list_posts:
+        cmd_list_posts()
+    elif args.enable:
+        cmd_enable()
+    elif args.disable:
+        cmd_disable()
+    elif args.status:
+        cmd_status()
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
