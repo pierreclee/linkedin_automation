@@ -1,0 +1,6 @@
+.env
+session/state.json
+linkedin.db
+__pycache__/
+*.pyc
+.pytest_cache/
